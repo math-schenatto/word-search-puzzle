@@ -1,65 +1,361 @@
-import Image from "next/image";
+"use client";
+
+import { useState } from "react";
+
+import WordSearchForm from "@/components/WordSearchForm";
+import WordSearchGrid from "@/components/WordSearchGrid";
+import ExportButtons from "@/components/ExportButtons";
+
+import { buildGrid } from "@/lib/buildGrid";
+
+import { generateSvg } from "@/lib/generateSvg";
+import { exportSvg } from "@/lib/exportSvg";
+import { exportPdf } from "@/lib/exportPdf";
+
+import { WordPlacement } from "@/types/word-placement";
+import { canPlaceWord } from "@/lib/canPlaceWord";
 
 export default function Home() {
+  const [rows, setRows] = useState(15);
+  const [cols, setCols] = useState(15);
+
+  const [words, setWords] = useState("");
+  const [wordMap, setWordMap] = useState<Record<string, string>>({});
+  const [
+    hoverPosition,
+    setHoverPosition,
+  ] = useState<{
+    row: number;
+    col: number;
+  } | null>(null);
+
+  const [grid, setGrid] = useState<string[][]>([]);
+ 
+
+  const [
+    movingWordId,
+    setMovingWordId,
+  ] = useState<string | null>(
+    null
+  );
+
+  
+  const moveWord = (
+    row: number,
+    col: number
+  ) => {
+    if (!movingWordId) {
+      return;
+    }
+
+    const movingWord =
+      placedWords.find(
+        (word) =>
+          word.id === movingWordId
+      );
+
+    if (!movingWord) {
+      return;
+    }
+
+    const isValid =
+      canPlaceWord(
+        movingWord,
+        row,
+        col,
+        placedWords,
+        rows,
+        cols
+      );
+
+    if (!isValid) {
+      alert(
+        "Não é possível posicionar a palavra aqui."
+      );
+      return;
+    }
+
+    const updatedWords =
+      placedWords.map((word) => {
+        if (
+          word.id !== movingWordId
+        ) {
+          return word;
+        }
+
+        return {
+          ...word,
+          row,
+          col,
+        };
+      });
+
+    setPlacedWords(
+      updatedWords
+    );
+
+    const result =
+      buildGrid(
+        rows,
+        cols,
+        updatedWords
+      );
+
+    setGrid(result.grid);
+
+    setCellColors(
+      result.colors
+    );
+
+    setWordMap(
+      result.wordMap
+    );
+
+    setMovingWordId(null);
+  };
+
+  const rotateWord = (
+    wordId: string
+  ) => {
+    const updatedWords =
+      placedWords.map(
+        (word): WordPlacement => {
+          if (word.id !== wordId) {
+            return word;
+          }
+
+          return {
+            ...word,
+            direction:
+              word.direction ===
+              "horizontal"
+                ? "vertical"
+                : "horizontal",
+          };
+        }
+      );
+
+    setPlacedWords(
+      updatedWords
+    );
+
+    const result =
+      buildGrid(
+        rows,
+        cols,
+        updatedWords
+      );
+
+    setGrid(result.grid);
+
+    setCellColors(
+      result.colors
+    );
+
+    setWordMap(
+      result.wordMap
+    );
+  };
+
+  const handleCellClick = (
+    row: number,
+    col: number
+  ) => {
+    if (movingWordId) {
+      moveWord(row, col);
+      return;
+    }
+
+    const wordId =
+      wordMap[
+        `${row}-${col}`
+      ];
+
+    if (!wordId) {
+      return;
+    }
+
+    setMovingWordId(wordId);
+  };
+
+  const [placedWords, setPlacedWords] =
+    useState<WordPlacement[]>([]);
+
+  const [cellColors, setCellColors] =
+    useState<Record<string, string>>({});
+
+ const previewWord: WordPlacement | null =
+  movingWordId
+    ? (
+        placedWords.find(
+          (w) =>
+            w.id ===
+            movingWordId
+        ) ?? null
+      )
+    : null;
+
+  const handleCellHover = (
+    row: number,
+    col: number
+  ) => {
+    if (!movingWordId) {
+      return;
+    }
+
+    setHoverPosition({
+      row,
+      col,
+    });
+  };
+
+  const handleGenerate = () => {
+    const wordsList = words
+      .split("\n")
+      .map((word) => word.trim())
+      .filter(Boolean)
+      .map((word) => word.toUpperCase());
+
+    const colors = [
+      "#ef4444",
+      "#22c55e",
+      "#3b82f6",
+      "#eab308",
+      "#a855f7",
+      "#ec4899",
+      "#06b6d4",
+      "#f97316",
+    ];
+
+    const placements: WordPlacement[] =
+      wordsList.map((word, index) => ({
+        id: crypto.randomUUID(),
+
+        word,
+
+        row: index,
+
+        col: 0,
+
+        direction: "horizontal",
+
+        color:
+          colors[
+            index % colors.length
+          ],
+      }));
+
+    setPlacedWords(placements);
+
+    const result = buildGrid(
+      rows,
+      cols,
+      placements
+    );
+
+    setGrid(result.grid);
+
+    setCellColors(
+      result.colors
+    );
+
+    setWordMap(
+      result.wordMap
+);
+  };
+
+  const handleCellChange = (
+    row: number,
+    col: number,
+    value: string
+  ) => {
+    const newGrid = [...grid];
+
+    newGrid[row] = [...newGrid[row]];
+
+    newGrid[row][col] =
+      value.toUpperCase();
+
+    setGrid(newGrid);
+  };
+
+  const handleCellRightClick = (
+    row: number,
+    col: number
+  ) => {
+    const wordId =
+      wordMap[
+        `${row}-${col}`
+      ];
+
+    if (!wordId) {
+      return;
+    }
+
+    rotateWord(wordId);
+  };
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <main className="min-h-screen p-8">
+      <div className="max-w-7xl mx-auto">
+        <h1 className="text-4xl font-bold mb-8">
+          Gerador de Caça-Palavras
+        </h1>
+
+        <div className="grid md:grid-cols-2 gap-8">
+          <WordSearchForm
+            rows={rows}
+            cols={cols}
+            words={words}
+            onRowsChange={setRows}
+            onColsChange={setCols}
+            onWordsChange={setWords}
+            onGenerate={handleGenerate}
+          />
+
+          <WordSearchGrid
+            grid={grid}
+            colors={cellColors}
+            wordMap={wordMap}
+            movingWordId={
+              movingWordId
+            }
+            placedWords={
+              placedWords
+            }
+            onCellChange={
+              handleCellChange
+            }
+            onCellClick={
+              handleCellClick
+            }
+            onCellRightClick={
+              handleCellRightClick
+            }
+            onCellHover={
+              handleCellHover
+            }
+            previewWord={
+              previewWord
+            }
+            hoverPosition={
+              hoverPosition
+            }
+          />
+
+          <ExportButtons
+            onExportSvg={() => {
+              const svg =
+                generateSvg(grid);
+
+              exportSvg(svg);
+            }}
+            onExportPdf={() => {
+              exportPdf(grid);
+            }}
+          />
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+      </div>
+    </main>
   );
 }
