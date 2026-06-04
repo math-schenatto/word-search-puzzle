@@ -347,7 +347,10 @@ export default function Home() {
               exportSvg(svg);
             }}
             onExportPdf={() => {
-              exportPdf(grid);
+              exportPdf(
+                grid,
+                placedWords
+              );
             }}
           />
         </div>
