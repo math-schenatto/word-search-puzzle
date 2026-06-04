@@ -14,6 +14,7 @@ import { exportPdf } from "@/lib/exportPdf";
 
 import { WordPlacement } from "@/types/word-placement";
 import { canPlaceWord } from "@/lib/canPlaceWord";
+import { generatePlacements } from "@/lib/generatePlacements";
 
 export default function Home() {
   const [rows, setRows] = useState(15);
@@ -210,59 +211,54 @@ export default function Home() {
   };
 
   const handleGenerate = () => {
-    const wordsList = words
-      .split("\n")
-      .map((word) => word.trim())
-      .filter(Boolean)
-      .map((word) => word.toUpperCase());
+  const wordsList = words
+    .split("\n")
+    .map((word) => word.trim())
+    .filter(Boolean)
+    .map((word) => word.toUpperCase());
 
-    const colors = [
-      "#ef4444",
-      "#22c55e",
-      "#3b82f6",
-      "#eab308",
-      "#a855f7",
-      "#ec4899",
-      "#06b6d4",
-      "#f97316",
-    ];
+  const colors = [
+    "#ef4444",
+    "#22c55e",
+    "#3b82f6",
+    "#eab308",
+    "#a855f7",
+    "#ec4899",
+    "#06b6d4",
+    "#f97316",
+  ];
 
-    const placements: WordPlacement[] =
-      wordsList.map((word, index) => ({
-        id: crypto.randomUUID(),
-
-        word,
-
-        row: index,
-
-        col: 0,
-
-        direction: "horizontal",
-
-        color:
-          colors[
-            index % colors.length
-          ],
-      }));
-
-    setPlacedWords(placements);
-
-    const result = buildGrid(
+  const placements: WordPlacement[] =
+    generatePlacements(
+      wordsList,
       rows,
-      cols,
-      placements
-    );
+      cols
+    ).map((placement, index) => ({
+      ...placement,
+      color:
+        colors[
+          index % colors.length
+        ],
+    }));
 
-    setGrid(result.grid);
+  setPlacedWords(placements);
 
-    setCellColors(
-      result.colors
-    );
+  const result = buildGrid(
+    rows,
+    cols,
+    placements
+  );
 
-    setWordMap(
-      result.wordMap
-);
-  };
+  setGrid(result.grid);
+
+  setCellColors(
+    result.colors
+  );
+
+  setWordMap(
+    result.wordMap
+  );
+};
 
   const handleCellChange = (
     row: number,
