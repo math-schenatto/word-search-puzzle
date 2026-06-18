@@ -1,24 +1,29 @@
 import { WordPlacement } from "@/types/word-placement";
 
+function randomLetterExcluding(excluded: string[]): string {
+  const available = Array.from({ length: 26 }, (_, i) =>
+    String.fromCharCode(65 + i)
+  ).filter(l => !excluded.includes(l));
+
+  const pool = available.length > 0 ? available : Array.from({ length: 26 }, (_, i) => String.fromCharCode(65 + i));
+  return pool[Math.floor(Math.random() * pool.length)];
+}
+
 export function buildGrid(
   rows: number,
   cols: number,
   words: WordPlacement[]
 ) {
-  const grid = Array.from(
-    { length: rows },
-    () =>
-      Array.from(
-        { length: cols },
-        () =>
-          String.fromCharCode(
-            65 +
-              Math.floor(
-                Math.random() * 26
-              )
-          )
-      )
-  );
+  const grid: string[][] = [];
+  for (let row = 0; row < rows; row++) {
+    grid[row] = [];
+    for (let col = 0; col < cols; col++) {
+      const excluded: string[] = [];
+      if (row > 0) excluded.push(grid[row - 1][col]);
+      if (col > 0) excluded.push(grid[row][col - 1]);
+      grid[row][col] = randomLetterExcluding(excluded);
+    }
+  }
 
   const colors: Record<
     string,
